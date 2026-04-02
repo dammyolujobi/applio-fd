@@ -6,16 +6,6 @@ const JobListings = ({ onLogout }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchParams, setSearchParams] = useState({ role: '', location: '' });
-  const [debouncedSearchParams, setDebouncedSearchParams] = useState({ role: '', location: '' });
-
-  // Debounce search params - wait 500ms after user stops typing
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchParams(searchParams);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchParams]);
 
   // Transform backend data to include source field
   const transformJobData = (data) => {
@@ -39,58 +29,66 @@ const JobListings = ({ onLogout }) => {
     return allJobs;
   };
 
-  // Fetch jobs from backend
-  useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem('access_token');
-        
-        if (!token) {
-          setError('No authentication token available');
-          return;
-        }
+  // Fetch jobs from backend when user clicks Search button
+  const handleSearch = async () => {
+    const abortController = new AbortController();
 
-        // Build query parameters
-        const params = new URLSearchParams({
-          role: debouncedSearchParams.role || 'developer',
-          location_of_job: debouncedSearchParams.location || 'Nigeria'
-        });
+    try {
+      setLoading(true);
+      setError(null);
+      const token = localStorage.getItem('access_token');
+      
+      if (!token) {
+        setError('No authentication token available');
+        setLoading(false);
+        return;
+      }
 
-        const response = await fetch(`http://localhost:8000/aggregate?${params.toString()}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (response.status === 401) {
-          localStorage.removeItem('access_token');
-          setError('Session expired. Please login again.');
-          if (onLogout) onLogout();
-          return;
-        }
+      // Validate inputs
+      if (!searchParams.role.trim() || !searchParams.location.trim()) {
+        setError('Please fill in both job role and location');
+        setLoading(false);
+        return;
+      }
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        setRawJobsData(data);
-        setError(null);
-      } catch (err) {
+      // Build query parameters
+      const params = new URLSearchParams({
+        role: searchParams.role,
+        location_of_job: searchParams.location
+      });
+
+      const response = await fetch(`http://localhost:8000/aggregate?${params.toString()}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        signal: abortController.signal
+      });
+      
+      if (response.status === 401) {
+        localStorage.removeItem('access_token');
+        setError('Session expired. Please login again.');
+        if (onLogout) onLogout();
+        setLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setRawJobsData(data);
+      setError(null);
+    } catch (err) {
+      if (err.name !== 'AbortError') {
         setError(err.message || 'Failed to fetch jobs');
         console.error('Error fetching jobs:', err);
-      } finally {
-        setLoading(false);
       }
-    };
-
-    // Only fetch when debounced search params change
-    if (debouncedSearchParams.role || debouncedSearchParams.location) {
-      fetchJobs();
+    } finally {
+      setLoading(false);
     }
-  }, [debouncedSearchParams, onLogout]);
+  };
 
   const jobsData = useMemo(() => {
     if (!rawJobsData) return [];
@@ -157,6 +155,7 @@ const JobListings = ({ onLogout }) => {
             value={searchParams.role}
             onChange={(e) => setSearchParams({...searchParams, role: e.target.value})}
             className="search-form-input"
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
           />
           <input 
             type="text" 
@@ -164,7 +163,26 @@ const JobListings = ({ onLogout }) => {
             value={searchParams.location}
             onChange={(e) => setSearchParams({...searchParams, location: e.target.value})}
             className="search-form-input"
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
           />
+          <button 
+            onClick={handleSearch} 
+            disabled={loading}
+            className="search-btn"
+            style={{
+              padding: '10px 24px',
+              backgroundColor: '#000',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontWeight: '500',
+              fontSize: '14px',
+              opacity: loading ? 0.6 : 1
+            }}
+          >
+            {loading ? 'Searching...' : 'Search'}
+          </button>
         </div>
       </div>
 
@@ -182,7 +200,7 @@ const JobListings = ({ onLogout }) => {
 
       {/* Initial State - No Search Performed */}
       {!loading && !rawJobsData && (
-        <div className="empty">Enter a job role and location to search.</div>
+        <div className="empty">Enter a job role and location, then click Search.</div>
       )}
 
       {/* Main Content - Only show if has data */}
