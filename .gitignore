@@ -1,42 +1,76 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+```
+# Dependencies
+node_modules/
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
+# Build artifacts
+dist/
+build/
+*.js.map
 
-# testing
-/coverage
-
-# production
-/build
-
-# misc
-.DS_Store
+# Environment
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+*.env.*
 
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# IDE
+# Editors
 .vscode/
 .idea/
+
+# Logs
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Temporary files
+*.tmp
 *.swp
-*.swo
 *~
-
-# OS
-Thumbs.db
 .DS_Store
+Thumbs.db
 
-# Cache
-.eslintcache
-.cache/
+# Coverage
+coverage/
+htmlcov/
+.coverage
 
-# Local authentication tokens
-access_token
+# Testing
+.mypy_cache/
+.pytest_cache/
+
+# Compiled
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.out
+
+# Compressed
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+```

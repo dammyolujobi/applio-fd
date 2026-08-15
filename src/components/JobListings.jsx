@@ -1,11 +1,12 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import './JobListings.css';
 
-const JobListings = ({ onLogout }) => {
+const JobListings = ({ onLogout, onNavigateToDashboard }) => {
   const [rawJobsData, setRawJobsData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchParams, setSearchParams] = useState({ role: '', location: '' });
+  const [selectedJob, setSelectedJob] = useState(null);
 
   // Transform backend data to include source field
   const transformJobData = (data) => {
@@ -60,9 +61,14 @@ const JobListings = ({ onLogout }) => {
       const response = await fetch(`http://localhost:8000/aggregate?${params.toString()}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
-        signal: abortController.signal
+        signal: abortController.signal,
+        body: JSON.stringify({
+          role: searchParams.role,
+          location: searchParams.location
+        })
       });
       
       if (response.status === 401) {
@@ -80,6 +86,9 @@ const JobListings = ({ onLogout }) => {
       const data = await response.json();
       setRawJobsData(data);
       setError(null);
+
+      // Store search in history
+      await storeSearchHistory(searchParams.role, searchParams.location, token);
     } catch (err) {
       if (err.name !== 'AbortError') {
         setError(err.message || 'Failed to fetch jobs');
@@ -87,6 +96,73 @@ const JobListings = ({ onLogout }) => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Store search history
+  const storeSearchHistory = async (query, location, token) => {
+    try {
+      await fetch('http://localhost:8000/users/search-history', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query: query,
+          location: location,
+          filters: {}
+        })
+      });
+    } catch (err) {
+      console.error('Error storing search history:', err);
+    }
+  };
+
+  // Handle job click to show details
+  const handleJobClick = async (job) => {
+    setSelectedJob(job);
+    
+    // Log view-job activity
+    try {
+      const token = localStorage.getItem('access_token');
+      if (token && job.job_id) {
+        await fetch(`http://localhost:8000/jobs/${job.job_id}?source=${job.source}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }).catch(() => {}); // Silently fail if endpoint doesn't exist
+      }
+    } catch (err) {
+      console.error('Error logging job view:', err);
+    }
+  };
+
+  // Handle save job from modal
+  const handleSaveJobFromModal = async (jobId) => {
+    if (!jobId) {
+      setError('No job ID available for saving');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch('http://localhost:8000/users/saved-jobs', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ job_id: jobId, notes: '' })
+      });
+
+      if (!response.ok) throw new Error('Failed to save job');
+
+      setSuccessMessage('Job saved successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setError(err.message);
+      setTimeout(() => setError(''), 3000);
     }
   };
 
@@ -98,6 +174,7 @@ const JobListings = ({ onLogout }) => {
   const [activeFilter, setActiveFilter] = useState("all");
   const [activeSource, setActiveSource] = useState("all");
   const [searchQ, setSearchQ] = useState("");
+  const [successMessage, setSuccessMessage] = useState('');
 
   const helpers = useMemo(() => ({
     getSourceLabel: (s) => ({jobberman:"Jobberman",myjobmag:"MyJobMag",indeed:"Indeed",apple:"Apple"}[s]||s),
@@ -140,11 +217,21 @@ const JobListings = ({ onLogout }) => {
         </div>
         <div className="header-right">
           <span className="count-pill">{filteredJobs.length} role{filteredJobs.length!==1?'s':''}</span>
+          {onNavigateToDashboard && (
+            <button onClick={onNavigateToDashboard} className="logout-btn" style={{ marginRight: '8px' }}>Dashboard</button>
+          )}
           {onLogout && (
             <button onClick={onLogout} className="logout-btn">Logout</button>
           )}
         </div>
       </div>
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="success-message">
+          <strong>Success!</strong> {successMessage}
+        </div>
+      )}
 
       {/* Search Form */}
       <div className="search-form-section">
@@ -260,7 +347,7 @@ const JobListings = ({ onLogout }) => {
                 if (helpers.isNew(j)) tags.push({type: 'new-tag', label: 'New'});
                 const company = j.company ? `· ${j.company}` : '';
                 return (
-                  <div key={idx} className="card">
+                  <div key={idx} className="card" onClick={() => handleJobClick(j)}>
                     <div className="card-left">
                       <div className="card-meta">
                         <span className={`source-dot ${j.source}`}></span>
@@ -276,7 +363,7 @@ const JobListings = ({ onLogout }) => {
                     </div>
                     <div className="card-right">
                       <span className="date">{j.date || '—'}</span>
-                      <a className="arrow-btn" href={j.url} target="_blank" rel="noopener noreferrer" title="View job">↗</a>
+                      <a className="arrow-btn" href={j.url} target="_blank" rel="noopener noreferrer" title="View job" onClick={(e) => e.stopPropagation()}>↗</a>
                     </div>
                   </div>
                 );
@@ -291,6 +378,79 @@ const JobListings = ({ onLogout }) => {
       {/* No Results State */}
       {!loading && rawJobsData && jobsData.length === 0 && (
         <div className="empty">No jobs found for your search.</div>
+      )}
+
+      {/* Job Detail Modal */}
+      {selectedJob && (
+        <div className="modal-overlay" onClick={() => setSelectedJob(null)}>
+          <div className="job-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="job-modal-header">
+              <div className="job-modal-title">
+                <h2>{selectedJob.title}</h2>
+                <p>{selectedJob.company || 'Company not specified'}</p>
+              </div>
+              <button className="modal-close" onClick={() => setSelectedJob(null)}>✕</button>
+            </div>
+            <div className="job-modal-content">
+              {selectedJob.description && (
+                <div className="job-section">
+                  <h3>Description</h3>
+                  <p className="job-description">{selectedJob.description}</p>
+                </div>
+              )}
+              <div className="job-meta-grid">
+                <div className="meta-item">
+                  <span className="meta-label">Source</span>
+                  <span className="meta-value">{helpers.getSourceLabel(selectedJob.source)}</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Location</span>
+                  <span className="meta-value">{selectedJob.location || 'Not specified'}</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Salary</span>
+                  <span className="meta-value">{selectedJob.salary || 'Not specified'}</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Posted</span>
+                  <span className="meta-value">{selectedJob.date || 'Not specified'}</span>
+                </div>
+              </div>
+              {selectedJob.requirements && (
+                <div className="job-section">
+                  <h3>Requirements</h3>
+                  <ul className="job-requirements">
+                    {Array.isArray(selectedJob.requirements) ? (
+                      selectedJob.requirements.map((req, i) => <li key={i}>{req}</li>)
+                    ) : (
+                      <li>{selectedJob.requirements}</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+              {selectedJob.benefits && (
+                <div className="job-section">
+                  <h3>Benefits</h3>
+                  <ul className="job-benefits">
+                    {Array.isArray(selectedJob.benefits) ? (
+                      selectedJob.benefits.map((ben, i) => <li key={i}>{ben}</li>)
+                    ) : (
+                      <li>{selectedJob.benefits}</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <div className="job-modal-footer">
+              <button className="btn-secondary" onClick={() => handleSaveJobFromModal(selectedJob.job_id || selectedJob.id)}>
+                Save Job
+              </button>
+              <a className="btn-primary" href={selectedJob.url} target="_blank" rel="noopener noreferrer">
+                Apply Now →
+              </a>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

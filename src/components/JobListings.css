@@ -24,6 +24,9 @@
   --badge-onsite-text: #8b5e00;
   --badge-new: #e8effe;
   --badge-new-text: #2a45a0;
+  --success-bg: #e8f5e8;
+  --success-border: #b5d5b5;
+  --success-text: #1a5c1a;
 }
 
 body {
@@ -532,5 +535,226 @@ body {
 
   .search-form-input {
     min-width: unset;
+  }
+}
+
+/* Success message */
+.success-message {
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 1.5rem;
+  font-size: 13px;
+  color: var(--success-text);
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+/* Job modal */
+.job-modal {
+  background: var(--surface);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.job-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.job-modal-title h2 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+  margin: 0 0 0.5rem 0;
+  color: var(--text);
+}
+
+.job-modal-title p {
+  font-size: 13px;
+  color: var(--text2);
+  margin: 0;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: var(--text3);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.modal-close:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.job-modal-content {
+  padding: 1.5rem;
+}
+
+.job-section {
+  margin-bottom: 1.5rem;
+}
+
+.job-section h3 {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 0.75rem 0;
+}
+
+.job-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text2);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.job-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--surface2);
+  border-radius: 8px;
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meta-label {
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.meta-value {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 400;
+}
+
+.job-requirements,
+.job-benefits {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0;
+}
+
+.job-requirements li,
+.job-benefits li {
+  font-size: 14px;
+  color: var(--text2);
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+}
+
+.job-modal-footer {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.job-modal-footer .btn-secondary,
+.job-modal-footer .btn-primary {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'DM Sans', sans-serif;
+  text-align: center;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.job-modal-footer .btn-secondary {
+  background: var(--surface);
+  color: var(--text2);
+  border: 1px solid var(--border2);
+}
+
+.job-modal-footer .btn-secondary:hover {
+  border-color: var(--text);
+  color: var(--text);
+  background: #f9f9f8;
+}
+
+.job-modal-footer .btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+}
+
+.job-modal-footer .btn-primary:hover {
+  background: #2a2a28;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 600px) {
+  .job-modal {
+    max-height: 90vh;
+  }
+  
+  .job-modal-header {
+    padding: 1rem;
+  }
+  
+  .job-modal-content {
+    padding: 1rem;
+  }
+  
+  .job-modal-footer {
+    flex-direction: column;
+    padding: 1rem;
+  }
+  
+  .job-modal-footer .btn-secondary,
+  .job-modal-footer .btn-primary {
+    width: 100%;
+  }
+  
+  .job-meta-grid {
+    grid-template-columns: 1fr;
   }
 }
